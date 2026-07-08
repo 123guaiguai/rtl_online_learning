@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = `http://${window.location.hostname}:8000`;
 
 export default function App() {
   // Settings & Theme State
