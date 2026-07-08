@@ -1,145 +1,61 @@
-# AutoChip
+# Experiments — LLM 驱动的 Verilog 代码自动生成框架
 
-AutoChip is designed to generate functional Verilog modules from an initial design prompt and testbench using a selected large language model. Errors from compilation and simulation are fed back into the LLM for repair.
+本项目基于开源框架 [AutoChip](https://github.com/shailja-thakur/AutoChip) 二次开发，通过大语言模型（LLM）与 EDA 仿真工具（Icarus Verilog）的紧密配合，实现 Verilog 代码的**自动生成 → 编译验证 → 错误反馈 → 迭代修复**的闭环流水线。
 
-## Setup
+---
 
-### Prerequisites
+## 快速上手
 
-- Python 3.10 or newer
-- `pip` for installing dependencies
-- [Icarus Verilog](https://github.com/steveicarus/iverilog)
+```bash
+# 1. 激活环境
+conda activate autochip
 
-### Installation
+# 2. 配置 API 密钥（首次使用）
+cd Experiments
+cp api_keys.example.py api_keys.py
+# 编辑 api_keys.py，填入真实密钥
 
-1.  Clone the repository to your local machine:
-```sh
-git clone https://github.com/shailja-thakur/AutoChip.git
-cd AutoChip
-```
-2.  Set up a virtual environment (optional but recommended):
-```sh
-python3 -m venv venv
-source venv/bin/activate
-```
-3.  Install the required python packages:
-```sh
-pip3 install -r requirements.txt
+# 3. 快速运行单道题验证
+./run_demo.sh rule90 siliconflow
+
+# 4. 批量测试（进入脚本目录后运行）
+cd core
+conda run -n autochip python run_batch_experiments.py -g hard -l 5 -i 2 -k 2 -n quick_test
 ```
 
-### Environment Variables
-API Keys (Must be set for the models being used):
- - OpenAI API Key: `OPENAI_API_KEY`
- - Anthropic API Key: `ANTHROPIC_API_KEY`
+---
 
-## Configuration
-AutoChip can be used with with a JSON config file or with a set of command line arguments.
+## 项目文档
 
-### General Settings
-These are the ordinary settings you can use for AutoChip. Each of these settings can be set in a JSON file or with command line arguments (defined below or in `usage.txt`).
+详细文档位于 [`docs/`](docs/) 目录：
 
-An exmaple general section of `config.json`:
-```json
-"general": {
-    "prompt": "../verilogeval_prompts_tbs/ve_testbenches_human/rule110/rule110.sv",
-    "name": "top_module",
-    "testbench": "../verilogeval_prompts_tbs/ve_testbenches_human/rule110/rule110_tb.sv",
-    "model_family": "ChatGPT",
-    "model_id": "gpt-4o-mini",
-    "num_candidates": 2,
-    "iterations": 3,
-    "outdir": "test_outdir",
-    "log": "log.txt",
-    "mixed-models": true
-},
-```
-The command line arguments are defined in `usage.txt` as follows:
-```
-Usage: generate_verilog.py [options]
+| 文档 | 内容 |
+|------|------|
+| [01_项目简介与结构说明.md](docs/01_项目简介与结构说明.md) | 项目背景、整体目录结构、核心运行机制（迭代、Rank 评分、候选机制、混合模型） |
+| [02_常规使用与部署指南.md](docs/02_常规使用与部署指南.md) | 环境安装、API 密钥配置、单题运行、配置文件说明、常见问题排查 |
+| [03_批量测试与扩展指南.md](docs/03_批量测试与扩展指南.md) | 批量测试命令行参数、示例运行命令、输出目录结构、混合模型策略、结果分析工具 |
 
-Required Options:
+---
 
-    -p, --prompt=<prompt>           : File containing the design prompt
+## 核心依赖
 
-    -n, --name=<module name>        : The module name, must match the testbench expected module name
+- **Python 3.10**（Conda 环境 `autochip`）
+- **Icarus Verilog**（`iverilog` / `vvp`）
+- **openai / anthropic / google-generativeai**
 
-    -t, --testbench=<testbench file>: File containing the testbench
+---
 
-    -o, --outdir=<output directory> : Directory to place all run-specific files in
-
-    -l, --log=<log file>            : Log the output of the model to the given file
-
-    -f, --model-family=<family>     : The LLM family to use (required unless using mixed model config)
-                                      Must be one of the following:
-                                      - ChatGPT
-                                      - Claude
-                                      - Mistral
-                                      - Gemini
-                                      - CodeLlama
-                                      - Human (requests user input)
-
-    -m, --model-id=<model ID>       : The specific model to use for the model family (required unless using mixed model config)
-
-Optional Options:
-
-    -h, --help                      : Prints this usage message
-
-    -c, --config=<config file>      : Specify the configuration file (default: config.json)
-
-    -i, --iter=<iterations>         : Number of iterations before the tool quits (default: 10)
-
-    -k, --num-candidates=<number>   : The number of candidates to rank per tree level (default: 1)
-```
-
-### Mixed-Models
-AutoChip supports calling to different models at certain points of the tree search. This can only be configured with the config file, there are no command line arguments to define mixed-model operation.
-
-An example mixed-model section of `config.json`:
-```json
-"mixed-models": {
-    "model1": {
-        "start_iteration": 0,
-        "model_family": "ChatGPT",
-        "model_id": "gpt-4o-mini"
-    },
-    "model2": {
-        "start_iteration": -1,
-        "model_family": "ChatGPT",
-        "model_id": "gpt-4o"
-    }
-}
-```
-
-## Usage
-To use the tool, follow the steps below:
-
-1. Prepare your initial Verilog design prompt and a testbench file that matches your module's requirements.
-
-2. Set up a `config.json` file as described above, or call `generate_verilog.py` with command line arguments defined in `usage.txt`
-
-
-## Citation
-
-If you find our work helpful, please cite as
-```
-@misc{blocklove2025automaticallyimprovingllmbasedverilog,
-      title={Automatically Improving LLM-based Verilog Generation using EDA Tool Feedback},
-      author={Jason Blocklove and Shailja Thakur and Benjamin Tan and Hammond Pearce and Siddharth Garg and Ramesh Karri},
-      year={2025},
-      eprint={2411.11856},
-      archivePrefix={arXiv},
-      primaryClass={cs.AR},
-      url={https://arxiv.org/abs/2411.11856},
-}
+## 目录结构速览
 
 ```
-This work has been accepted for publication in the ACM Transactions on Design Automation of Electronic Systems (TODAES) special issue on Large Language Models for Electronic System Design Automation
-
-## LICENCE
-
-Please note that this repo is under [Apache License](LICENSE)
-
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=shailja-thakur/AutoChip&type=Date)](https://star-history.com/#shailja-thakur/AutoChip&Date)
+Autochip_workspace/
+├── Experiments/
+│   ├── core/          ← 核心代码
+│   │   ├── generate_verilog.py    ← 单题入口
+│   │   ├── run_batch_experiments.py ← 批量测试唯一入口
+│   │   └── ...
+│   ├── VerilogEval/               ← 测试题数据集
+│   ├── api_keys.py      ← 密钥配置（本地，不提交 Git）
+│   └── run_demo.sh                ← 快速验证脚本
+└── docs/                          ← 项目文档
+```

@@ -1,8 +1,8 @@
 # AutoChip Workspace - Git忽略文件配置
 
 # ===== API密钥和敏感配置文件 =====
-AutoChip/.autochip_api_keys.py
-AutoChip/.autochip_config.json
+Experiments/api_keys.py
+Experiments/.autochip_config.json
 *.env
 .env.local
 .env.production
@@ -51,8 +51,7 @@ env/
 .ipynb_checkpoints
 
 # ===== 测试输出和日志 =====
-AutoChip/autochip_scripts/outputs/
-AutoChip/demo_output/
+Experiments/core/outputs/
 *.log
 test_results/
 
