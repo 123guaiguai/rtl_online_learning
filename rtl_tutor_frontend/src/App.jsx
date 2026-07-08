@@ -79,7 +79,7 @@ export default function App() {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const [chatInputHeight, setChatInputHeight] = useState(160);
+  const [chatInputHeight, setChatInputHeight] = useState(120);
 
   const handleChatInputMouseDown = (e) => {
     e.preventDefault();
@@ -686,28 +686,56 @@ export default function App() {
           {/* Bottom Console Panel */}
           <div className="console-resizer-handle" onMouseDown={handleConsoleMouseDown}></div>
           <div className="console-panel" style={{ height: `${consoleHeight}px` }}>
-            <div className="console-header">
-              <Terminal size={14} />
-              <span 
-                style={{ cursor: 'pointer', color: consoleTab === 'logs' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
-                onClick={() => setConsoleTab("logs")}
-              >
-                输出日志 (Console Logs)
-              </span>
-              <span style={{ color: 'var(--card-border)' }}>|</span>
-              <span 
-                style={{ cursor: 'pointer', color: consoleTab === 'metrics' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
-                onClick={() => { if(simResult) setConsoleTab("metrics") }}
-              >
-                仿真指标 (Simulation Metrics)
-              </span>
-              <span style={{ color: 'var(--card-border)' }}>|</span>
-              <span 
-                style={{ cursor: 'pointer', color: consoleTab === 'waves' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
-                onClick={() => setConsoleTab("waves")}
-              >
-                时序波形 (Waveforms)
-              </span>
+            <div className="console-header" style={{ justifyContent: 'space-between' }}>
+              <div className="console-tabs" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Terminal size={14} />
+                <span 
+                  style={{ cursor: 'pointer', color: consoleTab === 'logs' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+                  onClick={() => setConsoleTab("logs")}
+                >
+                  输出日志 (Console Logs)
+                </span>
+                <span style={{ color: 'var(--card-border)' }}>|</span>
+                <span 
+                  style={{ cursor: 'pointer', color: consoleTab === 'metrics' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+                  onClick={() => { if(simResult) setConsoleTab("metrics") }}
+                >
+                  仿真指标 (Simulation Metrics)
+                </span>
+                <span style={{ color: 'var(--card-border)' }}>|</span>
+                <span 
+                  style={{ cursor: 'pointer', color: consoleTab === 'waves' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+                  onClick={() => setConsoleTab("waves")}
+                >
+                  时序波形 (Waveforms)
+                </span>
+              </div>
+
+              {selectedProblem && (
+                <div className="console-quick-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button 
+                    className="quick-btn" 
+                    disabled={isStreaming}
+                    onClick={() => sendChatMessage("帮我指出当前代码中的硬件逻辑错误，但不要直接给我代码。")}
+                  >
+                    🔍 逻辑纠错
+                  </button>
+                  <button 
+                    className="quick-btn"
+                    disabled={isStreaming}
+                    onClick={() => sendChatMessage("解释这道题目所要求的硬件电路原理（例如它是时序电路还是组合电路，有哪些特殊边缘触发）？")}
+                  >
+                    💡 原理说明
+                  </button>
+                  <button 
+                    className="quick-btn"
+                    disabled={isStreaming}
+                    onClick={() => sendChatMessage("在 Verilog 语法中，这道题目涉及的赋值类型（阻塞与非阻塞）应该如何正确使用？")}
+                  >
+                    🔧 语法提示
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="console-body">
@@ -785,35 +813,9 @@ export default function App() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Chat Input & Fast Prompts */}
+          {/* Chat Input Area */}
           <div className="chat-input-resizer-handle" onMouseDown={handleChatInputMouseDown}></div>
           <div className="chat-input-area" style={{ height: `${chatInputHeight}px` }}>
-            {selectedProblem && (
-              <div className="quick-actions">
-                <button 
-                  className="quick-btn" 
-                  disabled={isStreaming}
-                  onClick={() => sendChatMessage("帮我指出当前代码中的硬件逻辑错误，但不要直接给我代码。")}
-                >
-                  🔍 逻辑纠错
-                </button>
-                <button 
-                  className="quick-btn"
-                  disabled={isStreaming}
-                  onClick={() => sendChatMessage("解释这道题目所要求的硬件电路原理（例如它是时序电路还是组合电路，有哪些特殊边缘触发）？")}
-                >
-                  💡 原理说明
-                </button>
-                <button 
-                  className="quick-btn"
-                  disabled={isStreaming}
-                  onClick={() => sendChatMessage("在 Verilog 语法中，这道题目涉及的赋值类型（阻塞与非阻塞）应该如何正确使用？")}
-                >
-                  🔧 语法提示
-                </button>
-              </div>
-            )}
-            
             <div className="input-row">
               <textarea 
                 className="chat-input" 
