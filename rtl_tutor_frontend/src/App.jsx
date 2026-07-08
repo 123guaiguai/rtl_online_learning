@@ -25,6 +25,10 @@ export default function App() {
   const [fontSize, setFontSize] = useState(16);
   const [theme, setTheme] = useState("dark"); // "dark" or "light"
   
+  // AI Diagnostic response in bottom console
+  const [aiDiagnosticResponse, setAiDiagnosticResponse] = useState("");
+  const [isAiDiagnosticStreaming, setIsAiDiagnosticStreaming] = useState(false);
+  
   // Resizable Panel Widths
   const [leftWidth, setLeftWidth] = useState(300);
   const [rightWidth, setRightWidth] = useState(380);
@@ -509,6 +513,67 @@ export default function App() {
     });
   };
 
+  // Run AI Diagnostic in the bottom console panel
+  const runAiDiagnostic = (promptText) => {
+    if (isAiDiagnosticStreaming || isStreaming) return;
+    
+    // Switch to AI tab in the console
+    setConsoleTab("ai");
+    setIsAiDiagnosticStreaming(true);
+    setAiDiagnosticResponse("");
+
+    // Attach latest compile logs as contextual help if available
+    let errorContext = "No compile run yet.";
+    if (simResult) {
+      errorContext = `Compile status: ${simResult.compile_status}. Sim status: ${simResult.sim_status}. Raw output: ${simResult.sim_raw_output}`;
+    }
+
+    const payload = {
+      problem_key: selectedProblem?.key || "unknown",
+      code: code,
+      error_type: "general_chat",
+      error_message: errorContext,
+      chat_history: [{ role: "user", content: promptText }]
+    };
+
+    fetch(`${API_BASE}/api/ai_tutor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => {
+      if (!response.body) throw new Error("ReadableStream not supported");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let tutorMessage = "";
+
+      function readChunk() {
+        reader.read().then(({ done, value }) => {
+          if (done) {
+            setIsAiDiagnosticStreaming(false);
+            return;
+          }
+          const chunkStr = decoder.decode(value);
+          const lines = chunkStr.split('\n');
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const text = line.slice(6);
+              tutorMessage += text;
+              setAiDiagnosticResponse(tutorMessage);
+            }
+          }
+          readChunk();
+        });
+      }
+      readChunk();
+    })
+    .catch(err => {
+      console.error(err);
+      setIsAiDiagnosticStreaming(false);
+      setAiDiagnosticResponse("🤖 抱歉，AI 诊断在流式输出中出错。");
+    });
+  };
+
   // Simple Markdown Renderer
   const renderMarkdown = (text) => {
     if (!text) return "";
@@ -693,21 +758,28 @@ export default function App() {
                   style={{ cursor: 'pointer', color: consoleTab === 'logs' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                   onClick={() => setConsoleTab("logs")}
                 >
-                  输出日志 (Console Logs)
+                  输出日志
                 </span>
                 <span style={{ color: 'var(--card-border)' }}>|</span>
                 <span 
                   style={{ cursor: 'pointer', color: consoleTab === 'metrics' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                   onClick={() => { if(simResult) setConsoleTab("metrics") }}
                 >
-                  仿真指标 (Simulation Metrics)
+                  仿真指标
                 </span>
                 <span style={{ color: 'var(--card-border)' }}>|</span>
                 <span 
                   style={{ cursor: 'pointer', color: consoleTab === 'waves' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                   onClick={() => setConsoleTab("waves")}
                 >
-                  时序波形 (Waveforms)
+                  时序波形
+                </span>
+                <span style={{ color: 'var(--card-border)' }}>|</span>
+                <span 
+                  style={{ cursor: 'pointer', color: consoleTab === 'ai' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+                  onClick={() => setConsoleTab("ai")}
+                >
+                  AI 诊断
                 </span>
               </div>
 
@@ -715,22 +787,22 @@ export default function App() {
                 <div className="console-quick-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <button 
                     className="quick-btn" 
-                    disabled={isStreaming}
-                    onClick={() => sendChatMessage("帮我指出当前代码中的硬件逻辑错误，但不要直接给我代码。")}
+                    disabled={isStreaming || isAiDiagnosticStreaming}
+                    onClick={() => runAiDiagnostic("帮我指出当前代码中的硬件逻辑错误，但不要直接给我代码。")}
                   >
                     🔍 逻辑纠错
                   </button>
                   <button 
                     className="quick-btn"
-                    disabled={isStreaming}
-                    onClick={() => sendChatMessage("解释这道题目所要求的硬件电路原理（例如它是时序电路还是组合电路，有哪些特殊边缘触发）？")}
+                    disabled={isStreaming || isAiDiagnosticStreaming}
+                    onClick={() => runAiDiagnostic("解释这道题目所要求的硬件电路原理（例如它是时序电路还是组合电路，有哪些特殊边缘触发）？")}
                   >
                     💡 原理说明
                   </button>
                   <button 
                     className="quick-btn"
-                    disabled={isStreaming}
-                    onClick={() => sendChatMessage("在 Verilog 语法中，这道题目涉及的赋值类型（阻塞与非阻塞）应该如何正确使用？")}
+                    disabled={isStreaming || isAiDiagnosticStreaming}
+                    onClick={() => runAiDiagnostic("在 Verilog 语法中，这道题目涉及的赋值类型（阻塞与非阻塞）应该如何正确使用？")}
                   >
                     🔧 语法提示
                   </button>
@@ -780,8 +852,21 @@ export default function App() {
                     </div>
                   </div>
                 )
-              ) : (
+              ) : consoleTab === "waves" ? (
                 <WaveformViewer waveform={simResult?.waveform} />
+              ) : (
+                <div className="console-ai-container" style={{ padding: '4px', height: '100%', overflowY: 'auto' }}>
+                  {aiDiagnosticResponse ? (
+                    <div className="chat-bubble" style={{ color: 'var(--text-primary)', fontFamily: 'sans-serif', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}>
+                      {renderMarkdown(aiDiagnosticResponse)}
+                    </div>
+                  ) : (
+                    <div className="console-empty">
+                      <Sparkles size={24} style={{ color: 'var(--accent-cyan)' }} />
+                      <span>点击右侧“逻辑纠错”、“原理说明”或“语法提示”，AI 导师的实时分析将在这里为您呈现。</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
