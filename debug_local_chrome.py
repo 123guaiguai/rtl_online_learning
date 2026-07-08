@@ -63,13 +63,31 @@ async def main():
             except Exception as e:
                 print(f"⚠️ 页面跳转超时: {e}")
 
-        # 开始自动点击 'Prob001 zero' 选项
+        # 开始自动点击流程
         try:
-            print("👉 正在自动点击列表中的 'Prob001 zero' 选项...")
-            await page.click("text=Prob001 zero", timeout=5000)
-            print("✨ 点击成功！您应该能在屏幕上看到题目已切换。")
+            # 1. 如果在首页，点击“在线练习”进入选题页面
+            practice_btn = page.locator("text=在线练习")
+            if await practice_btn.count() > 0:
+                print("👉 正在点击“在线练习”以跳转至选题页面...")
+                await practice_btn.first.click()
+                await page.wait_for_timeout(1000)
+            
+            # 2. 选择“Prob001 zero”题目
+            prob_card = page.locator("text=Prob001 zero")
+            if await prob_card.count() > 0:
+                print("👉 正在选择“Prob001 zero”...")
+                await prob_card.first.click()
+                await page.wait_for_timeout(1000)
+            
+            # 3. 点击“确认进入练习”
+            confirm_btn = page.locator("text=确认进入练习")
+            if await confirm_btn.count() > 0:
+                print("👉 正在点击“确认进入练习”...")
+                await confirm_btn.first.click()
+                await page.wait_for_timeout(1000)
+                print("✨ 成功进入主设计区！")
         except Exception as e:
-            print(f"⚠️ 自动点击失败 (请确保网页已完全加载且包含题目列表): {e}")
+            print(f"⚠️ 自动点击流程失败: {e}")
         
         await page.wait_for_timeout(3000)
         print("🎉 自动化控制测试结束！")

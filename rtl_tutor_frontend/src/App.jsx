@@ -14,7 +14,13 @@ import {
   CheckCircle,
   HelpCircle,
   Sun,
-  Moon
+  Moon,
+  FileCode,
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  History,
+  Check
 } from 'lucide-react';
 import './App.css';
 
@@ -28,6 +34,12 @@ export default function App() {
   // AI Diagnostic response in bottom console
   const [aiDiagnosticResponse, setAiDiagnosticResponse] = useState("");
   const [isAiDiagnosticStreaming, setIsAiDiagnosticStreaming] = useState(false);
+
+  // Page Navigation & Problem Selection State
+  const [currentPage, setCurrentPage] = useState("home"); // "home", "select_problem", "workspace"
+  const [selectedDifficulty, setSelectedDifficulty] = useState("入门");
+  const [previewProblem, setPreviewProblem] = useState(null);
+  const [historyList, setHistoryList] = useState([]);
   
   // Resizable Panel Widths
   const [leftWidth, setLeftWidth] = useState(300);
@@ -134,6 +146,8 @@ export default function App() {
         setFilteredProblems(data);
         if (data.length > 0) {
           selectProblem(data[0]);
+          setPreviewProblem(data[0]);
+          setHistoryList([data[0]]);
         }
       })
       .catch(err => {
@@ -231,9 +245,30 @@ export default function App() {
     setChatMessages([
       {
         role: "tutor",
-        content: `你好！我是你的 AI 硬件电路导师。我已经为你加载了题目 **${problem.id} - ${problem.name}**。\n\n请先仔细阅读左侧的接口描述与题目要求，在中间编辑器中编写 Verilog 代码，完成后点击 **“运行测试”**。如果有任何疑问或遇到了报错，点击 **“AI 助教诊断”** 或在下方直接向我提问！`
+        content: `你好！我是你的 AI 硬件电路导师。我已经为你加载了题目 **${problem.id} - ${problem.name}**。\n\n请先仔细阅读左侧的接口描述与题目要求，在中间编辑器中编写 Verilog 代码，完成后点击 **“运行测试”**。如果有任何疑问或遇到了报错，点击 **“AI 批改”** 或在下方直接向我提问！`
       }
     ]);
+  };
+
+  // Get difficulty level based on problem ID
+  const getProblemDifficulty = (prob) => {
+    if (!prob || !prob.id) return "入门";
+    const idNum = parseInt(prob.id.replace("Prob", ""), 10);
+    if (isNaN(idNum)) return "入门";
+    if (idNum <= 10) return "入门";
+    if (idNum <= 20) return "中等";
+    return "困难";
+  };
+
+  // Confirm problem selection from Selection Page
+  const handleConfirmProblem = (prob) => {
+    if (!prob) return;
+    selectProblem(prob);
+    setHistoryList(prev => {
+      if (prev.some(p => p.key === prob.key)) return prev;
+      return [...prev, prob];
+    });
+    setCurrentPage("workspace");
   };
 
   // Editor OnMount hook
@@ -420,7 +455,7 @@ export default function App() {
         const next = [...prev];
         next[next.length - 1] = {
           role: "tutor",
-          content: "🤖 抱歉，连接 AI 助教失败。请检查服务器网络。"
+          content: "🤖 抱歉，连接 AI 导师失败。请检查服务器网络。"
         };
         return next;
       });
@@ -506,7 +541,7 @@ export default function App() {
         const next = [...prev];
         next[next.length - 1] = {
           role: "tutor",
-          content: "🤖 抱歉，AI 助教在流式输出中出错。"
+          content: "🤖 抱歉，AI 导师在流式输出中出错。"
         };
         return next;
       });
@@ -570,7 +605,7 @@ export default function App() {
     .catch(err => {
       console.error(err);
       setIsAiDiagnosticStreaming(false);
-      setAiDiagnosticResponse("🤖 抱歉，AI 诊断在流式输出中出错。");
+      setAiDiagnosticResponse("🤖 抱歉，AI 批改在流式输出中出错。");
     });
   };
 
@@ -619,14 +654,240 @@ export default function App() {
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
   };
 
+
+  if (currentPage === "home") {
+    return (
+      <div className={`app-container theme-${theme}`} style={{ display: 'flex', flexDirection: 'column', height: '100vh', justifyContent: 'center', alignItems: 'center', background: 'radial-gradient(circle at center, #0f172a 0%, #020617 100%)' }}>
+        <div style={{ textAlign: 'center', maxWidth: '800px', padding: '40px', background: 'rgba(30, 41, 59, 0.4)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(16px)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'fadeIn 0.8s ease-out' }}>
+          <div style={{ marginBottom: '24px', display: 'inline-flex', padding: '16px', background: 'rgba(6, 182, 212, 0.15)', borderRadius: '50%', color: 'var(--accent-cyan)' }}>
+            <Cpu size={48} />
+          </div>
+          <h1 style={{ fontSize: '3.5rem', fontWeight: '800', color: '#fff', marginBottom: '16px', letterSpacing: '2px', background: 'linear-gradient(to right, #06b6d4, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Verilog 在线学习系统
+          </h1>
+          <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '40px', lineHeight: '1.6' }}>
+            融合硬件编译器沙盒、高精度时序波形模拟与生成式 AI 硬件电路导师，<br />
+            为您开启沉浸式的数字集成电路设计与在线自主学习体验。
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', width: '100%', maxWidth: '600px', margin: '0 auto' }}>
+            <div 
+              className="home-card"
+              onClick={() => alert("📖 原理学习模块正在筹备开发中，敬请期待！")}
+            >
+              <BookOpen size={28} style={{ color: '#3b82f6' }} />
+              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#fff' }}>原理学习</span>
+            </div>
+            
+            <div 
+              className="home-card primary"
+              onClick={() => setCurrentPage("select_problem")}
+            >
+              <FileCode size={28} style={{ color: 'var(--accent-cyan)' }} />
+              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#fff' }}>在线练习</span>
+            </div>
+
+            <div 
+              className="home-card"
+              onClick={() => alert("📝 在线测试模块正在筹备开发中，敬请期待！")}
+            >
+              <Award size={28} style={{ color: '#f59e0b' }} />
+              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#fff' }}>在线测试</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentPage === "select_problem") {
+    // Filter problems by active difficulty and search query
+    const categoryProblems = problems.filter(p => getProblemDifficulty(p) === selectedDifficulty);
+    const filteredCategoryProblems = categoryProblems.filter(p => 
+      p.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+      <div className={`app-container theme-${theme}`} style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
+        {/* Header */}
+        <header className="app-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              className="quick-btn" 
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px' }}
+              onClick={() => setCurrentPage("home")}
+            >
+              <ChevronLeft size={16} />
+              <span>返回首页</span>
+            </button>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', margin: 0 }}>选择练习题目</h2>
+          </div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            选择符合您当前水平的题目，开启 Verilog 设计之旅
+          </div>
+        </header>
+
+        {/* Content Body */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          
+          {/* Left Sidebar: Difficulty Tabs */}
+          <div style={{ width: '200px', borderRight: '1px solid var(--card-border)', background: 'var(--bg-secondary)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+              难度分档
+            </div>
+            {[
+              { id: "入门", label: "🟢 入门基础", color: "#10b981", class: "easy" },
+              { id: "中等", label: "🟡 中等强化", color: "#f59e0b", class: "medium" },
+              { id: "困难", label: "🔴 困难挑战", color: "#ef4444", class: "hard" }
+            ].map(diff => (
+              <button
+                key={diff.id}
+                className={`difficulty-btn ${selectedDifficulty === diff.id ? `active ${diff.class}` : ''}`}
+                onClick={() => {
+                  setSelectedDifficulty(diff.id);
+                  // Auto-select first problem of new category if available
+                  const firstOfCategory = problems.find(p => getProblemDifficulty(p) === diff.id);
+                  if (firstOfCategory) setPreviewProblem(firstOfCategory);
+                }}
+              >
+                {diff.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Center Column: Problem List with Search */}
+          <div style={{ width: '380px', borderRight: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--card-border)' }}>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="text" 
+                  placeholder="搜索本难度题目..." 
+                  className="search-input"
+                  style={{ width: '100%', paddingRight: '36px' }}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Search size={14} style={{ position: 'absolute', right: '12px', top: '11px', color: 'var(--text-muted)' }} />
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {filteredCategoryProblems.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  没有找到符合搜索条件的题目
+                </div>
+              ) : (
+                filteredCategoryProblems.map(p => (
+                  <div
+                    key={p.key}
+                    className={`problem-select-card ${previewProblem?.key === p.key ? 'active' : ''}`}
+                    onClick={() => setPreviewProblem(p)}
+                    onDoubleClick={() => handleConfirmProblem(p)}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontWeight: '600', color: '#fff', fontSize: '0.95rem' }}>
+                        {p.id} {p.name}
+                      </div>
+                      <ChevronRight size={16} style={{ color: previewProblem?.key === p.key ? 'var(--accent-cyan)' : 'var(--text-muted)' }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Spec Preview & Confirm */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+            {previewProblem ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Preview Header */}
+                <div style={{ padding: '24px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      background: selectedDifficulty === '入门' ? 'rgba(16,185,129,0.15)' : selectedDifficulty === '中等' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: selectedDifficulty === '入门' ? '#10b981' : selectedDifficulty === '中等' ? '#f59e0b' : '#ef4444',
+                      border: `1px solid ${selectedDifficulty === '入门' ? 'rgba(16,185,129,0.3)' : selectedDifficulty === '中等' ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                      marginRight: '8px'
+                    }}>
+                      {selectedDifficulty}
+                    </span>
+                    <h3 style={{ fontSize: '1.4rem', fontWeight: '700', color: '#fff', display: 'inline' }}>
+                      {previewProblem.id} {previewProblem.name}
+                    </h3>
+                  </div>
+                  
+                  <button 
+                    className="send-btn"
+                    style={{
+                      background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                      border: 'none',
+                      color: '#fff',
+                      padding: '10px 24px',
+                      borderRadius: '10px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(6, 182, 212, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'transform 0.1s ease'
+                    }}
+                    onClick={() => handleConfirmProblem(previewProblem)}
+                  >
+                    <Check size={16} />
+                    <span>确认进入练习</span>
+                  </button>
+                </div>
+
+                {/* Preview Description */}
+                <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+                  <div style={{ 
+                    background: 'var(--bg-primary)', 
+                    border: '1px solid var(--card-border)', 
+                    borderRadius: '16px', 
+                    padding: '20px', 
+                    fontFamily: 'monospace', 
+                    whiteSpace: 'pre-wrap', 
+                    lineHeight: '1.6', 
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.95rem'
+                  }}>
+                    {previewProblem.description}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>
+                请选择题目进行预览
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`app-container theme-${theme}`} style={{ '--base-font-size': `${fontSize}px` }}>
       {/* Top Header */}
       <header className="app-header">
         <div className="logo-section">
-          <Cpu className="logo-icon" size={24} />
-          <h1>RTL-Tutor</h1>
+          <Cpu className="logo-icon" size={24} style={{ cursor: 'pointer' }} onClick={() => setCurrentPage("home")} />
+          <h1 style={{ cursor: 'pointer' }} onClick={() => setCurrentPage("home")}>RTL-Tutor</h1>
           <span className="model-badge">DeepSeek-V3 硬件教学版</span>
+          <button 
+            className="quick-btn" 
+            style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem' }}
+            onClick={() => setCurrentPage("home")}
+          >
+            🏠 返回首页
+          </button>
         </div>
         <div className="header-controls">
           <div className="control-item">
@@ -658,40 +919,95 @@ export default function App() {
       {/* Main Workspace */}
       <div className="workspace">
         
-        {/* Left Column: Problem List & Spec */}
-        <div className="left-panel" style={{ width: `${leftWidth}px` }}>
-          <div className="search-container">
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="text" 
-                placeholder="搜索题目 (ID、名称)..." 
-                className="search-input"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Search size={14} style={{ position: 'absolute', right: '12px', top: '11px', color: 'var(--text-muted)' }} />
-            </div>
-          </div>
-
-          <div className="problems-list">
-            {filteredProblems.map((p) => (
-              <div 
-                key={p.key} 
-                className={`problem-card ${selectedProblem?.key === p.key ? 'active' : ''}`}
-                onClick={() => selectProblem(p)}
-              >
-                <span className="problem-name">{p.id} {p.name}</span>
-                <span className="problem-id">{p.id}</span>
-              </div>
-            ))}
-          </div>
-
+        {/* Left Column: Current Problem & History List */}
+        <div className="left-panel" style={{ width: `${leftWidth}px`, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          
+          {/* Section 1: Current Selected Problem */}
           {selectedProblem && (
-            <div className="problem-desc-container">
-              <h3>📄 接口与设计说明</h3>
-              <div className="problem-desc">{selectedProblem.description}</div>
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  当前选中题目
+                </span>
+                <span style={{
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '0.7rem',
+                  fontWeight: '700',
+                  background: getProblemDifficulty(selectedProblem) === '入门' ? 'rgba(16,185,129,0.15)' : getProblemDifficulty(selectedProblem) === '中等' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                  color: getProblemDifficulty(selectedProblem) === '入门' ? '#10b981' : getProblemDifficulty(selectedProblem) === '中等' ? '#f59e0b' : '#ef4444',
+                  border: `1px solid ${getProblemDifficulty(selectedProblem) === '入门' ? 'rgba(16,185,129,0.3)' : getProblemDifficulty(selectedProblem) === '中等' ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}`
+                }}>
+                  {getProblemDifficulty(selectedProblem)}
+                </span>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '700', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }} title={`${selectedProblem.id} ${selectedProblem.name}`}>
+                  {selectedProblem.id} {selectedProblem.name}
+                </h3>
+                <button
+                  className="quick-btn"
+                  style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                  onClick={() => setCurrentPage("select_problem")}
+                >
+                  <RefreshCw size={12} />
+                  <span>重新选题</span>
+                </button>
+              </div>
             </div>
           )}
+
+          {/* Section 2: History Selected List */}
+          <div style={{ borderBottom: '1px solid var(--card-border)', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid var(--card-border)' }}>
+              <History size={14} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                历史练习题目
+              </span>
+            </div>
+            
+            <div className="problems-list" style={{ maxHeight: '180px', overflowY: 'auto', padding: '6px' }}>
+              {historyList.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                  暂无历史记录。
+                </div>
+              ) : (
+                historyList.map((p) => (
+                  <div 
+                    key={p.key} 
+                    className={`problem-card ${selectedProblem?.key === p.key ? 'active' : ''}`}
+                    style={{ padding: '10px 12px', borderRadius: '8px', marginBottom: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    onClick={() => selectProblem(p)}
+                  >
+                    <span className="problem-name" style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>{p.id} {p.name}</span>
+                    <span style={{
+                      padding: '2px 4px',
+                      borderRadius: '3px',
+                      fontSize: '0.65rem',
+                      fontWeight: '700',
+                      background: getProblemDifficulty(p) === '入门' ? 'rgba(16,185,129,0.1)' : getProblemDifficulty(p) === '中等' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
+                      color: getProblemDifficulty(p) === '入门' ? '#10b981' : getProblemDifficulty(p) === '中等' ? '#f59e0b' : '#ef4444',
+                      flexShrink: 0
+                    }}>{getProblemDifficulty(p)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Section 3: Problem Description Scroll */}
+          {selectedProblem && (
+            <div className="problem-desc-container" style={{ flex: 1, overflowY: 'auto', padding: '16px', borderTop: 'none', background: 'transparent' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                📄 接口与设计说明
+              </h4>
+              <div className="problem-desc" style={{ fontSize: '0.85rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                {selectedProblem.description}
+              </div>
+            </div>
+          )}
+
         </div>
 
         <div className="resizer-handle" onMouseDown={handleLeftMouseDown}></div>
@@ -721,7 +1037,7 @@ export default function App() {
                 style={{ background: 'rgba(6, 182, 212, 0.1)', border: '1px solid rgba(6, 182, 212, 0.3)', color: 'var(--accent-cyan)' }}
               >
                 <Sparkles size={16} />
-                <span>AI 助教诊断</span>
+                <span>AI 助教批改</span>
               </button>
             </div>
           </div>
@@ -779,7 +1095,7 @@ export default function App() {
                   style={{ cursor: 'pointer', color: consoleTab === 'ai' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                   onClick={() => setConsoleTab("ai")}
                 >
-                  AI 诊断
+                  AI 批改
                 </span>
               </div>
 
@@ -863,7 +1179,7 @@ export default function App() {
                   ) : (
                     <div className="console-empty">
                       <Sparkles size={24} style={{ color: 'var(--accent-cyan)' }} />
-                      <span>点击右侧“逻辑纠错”、“原理说明”或“语法提示”，AI 导师的实时分析将在这里为您呈现。</span>
+                      <span>点击右侧“逻辑纠错”、“原理说明”或“语法提示”，AI 导师的实时批改分析将在这里为您呈现。</span>
                     </div>
                   )}
                 </div>
