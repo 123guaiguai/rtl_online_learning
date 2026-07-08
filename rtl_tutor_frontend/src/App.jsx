@@ -822,21 +822,7 @@ export default function App() {
                   </div>
                   
                   <button 
-                    className="send-btn"
-                    style={{
-                      background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                      border: 'none',
-                      color: '#fff',
-                      padding: '10px 24px',
-                      borderRadius: '10px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 15px rgba(6, 182, 212, 0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      transition: 'transform 0.1s ease'
-                    }}
+                    className="confirm-select-btn"
                     onClick={() => handleConfirmProblem(previewProblem)}
                   >
                     <Check size={16} />
