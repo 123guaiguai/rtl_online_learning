@@ -220,7 +220,19 @@
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
-  gap: 8px;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.console-header::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+.console-header span {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .console-body {
@@ -436,6 +448,8 @@
   font-size: calc(var(--base-font-size) - 3px);
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .quick-btn:hover {
